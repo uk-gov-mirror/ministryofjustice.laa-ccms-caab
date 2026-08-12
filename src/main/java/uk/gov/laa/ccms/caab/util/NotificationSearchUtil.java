@@ -65,9 +65,11 @@ public final class NotificationSearchUtil {
       } else {
         // Convert date formats
         LocalDate notificationToDate =
-            DateUtils.convertToLocalDate(criteria.getNotificationToDate());
+            DateUtils.convertToLocalDate(
+                DateUtils.sanitiseDateInput(criteria.getNotificationToDate()));
         LocalDate notificationFromDate =
-            DateUtils.convertToLocalDate(criteria.getNotificationFromDate());
+            DateUtils.convertToLocalDate(
+                DateUtils.sanitiseDateInput(criteria.getNotificationFromDate()));
         copyCriteria.setNotificationToDate(notificationToDate.format(ISO));
         copyCriteria.setNotificationFromDate(notificationFromDate.format(ISO));
       }

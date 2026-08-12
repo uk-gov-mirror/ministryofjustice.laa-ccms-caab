@@ -12,6 +12,7 @@ import uk.gov.laa.ccms.caab.bean.common.DynamicOptionFormData;
 import uk.gov.laa.ccms.caab.bean.request.ProviderRequestDetailsFormData;
 import uk.gov.laa.ccms.caab.bean.validators.file.FileUploadValidator;
 import uk.gov.laa.ccms.caab.constants.ProviderRequestDateFields;
+import uk.gov.laa.ccms.caab.util.DateUtils;
 
 /**
  * Validator component responsible for validating {@link
@@ -28,7 +29,6 @@ public class ProviderRequestDetailsValidator extends FileUploadValidator {
   private static final String FIELD_TYPE_FTL = "FTL";
 
   private static final String DATE_FORMAT = "dd/MM/yyyy";
-
   private static final BigDecimal MAX_COST_LIMIT = new BigDecimal("100000000.00");
 
   public ProviderRequestDetailsValidator(
@@ -74,9 +74,17 @@ public class ProviderRequestDetailsValidator extends FileUploadValidator {
               }
 
               if (StringUtils.hasText(value.getFieldValue())) {
+                validateDateInputCharacters(fieldPath, value.getFieldValue(), errors);
                 validateFieldByType(key, fieldPath, value, errors);
               }
             });
+  }
+
+  private void validateDateInputCharacters(
+      final String fieldPath, final String fieldValue, final Errors errors) {
+    if (DateUtils.hasInvalidDateCharacters(fieldValue)) {
+      errors.rejectValue(fieldPath, "validation.error.invalidDateCharacters");
+    }
   }
 
   private void validateFieldByType(

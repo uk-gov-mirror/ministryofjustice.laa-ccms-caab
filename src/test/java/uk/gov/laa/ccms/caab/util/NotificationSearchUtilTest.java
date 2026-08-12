@@ -1,5 +1,6 @@
 package uk.gov.laa.ccms.caab.util;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.LocalDate;
@@ -115,5 +116,28 @@ class NotificationSearchUtilTest {
     // Then
     assertEquals(toResultStringDate(fromDate), result.getNotificationFromDate());
     assertEquals(toResultStringDate(toDate), result.getNotificationToDate());
+  }
+
+  @Test
+  @DisplayName("Should strip quotes from date inputs")
+  void shouldStripQuotesFromDateInputs() {
+    NotificationSearchCriteria input = new NotificationSearchCriteria();
+    input.setNotificationFromDate("3/8/2026\"");
+    input.setNotificationToDate("4/8/2026'");
+
+    assertDoesNotThrow(() -> NotificationSearchUtil.prepareNotificationSearchCriteria(input));
+  }
+
+  @Test
+  @DisplayName("Should strip special characters from date inputs")
+  void shouldStripSpecialCharactersFromDateInputs() {
+    NotificationSearchCriteria input = new NotificationSearchCriteria();
+    input.setNotificationFromDate("3/8/2026!@#$%");
+    input.setNotificationToDate("4/8/2026<script>");
+
+    NotificationSearchCriteria result =
+        assertDoesNotThrow(() -> NotificationSearchUtil.prepareNotificationSearchCriteria(input));
+    assertEquals(toResultStringDate(LocalDate.of(2026, 8, 3)), result.getNotificationFromDate());
+    assertEquals(toResultStringDate(LocalDate.of(2026, 8, 4)), result.getNotificationToDate());
   }
 }

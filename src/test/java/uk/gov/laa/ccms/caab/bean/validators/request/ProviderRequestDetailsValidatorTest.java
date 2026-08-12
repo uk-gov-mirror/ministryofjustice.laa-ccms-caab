@@ -8,11 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -260,34 +264,28 @@ class ProviderRequestDetailsValidatorTest {
     assertEquals("validation.error.invalidMagicBytes", errors.getFieldError("file").getCode());
   }
 
-  @Test
-  @DisplayName("validate - FTS field in date list with valid date should pass")
-  void validate_FtsDateField_ValidDate_NoErrors() {
-    final DynamicOptionFormData dateOption = new DynamicOptionFormData();
-    dateOption.setMandatory(true);
-    dateOption.setFieldValue("03/06/2026");
-    dateOption.setFieldDescription("Special Date Field");
-    dateOption.setFieldType("FTS");
-
-    final Map<String, DynamicOptionFormData> dynamicOptions = new HashMap<>();
-    dynamicOptions.put("PCASEBALS3", dateOption);
-
-    formData.setDynamicOptions(dynamicOptions);
-
-    formData.setIsAdditionalInformationPromptRequired(false);
-    formData.setAdditionalInformation("N/A");
-
-    providerRequestDetailsValidator.validate(formData, errors);
-
-    assertFalse(errors.hasErrors());
+  static Stream<Arguments> ftsDateFieldArguments() {
+    return Stream.of(
+        Arguments.of("03/06/2026", false),
+        Arguments.of("03-06-2026", true),
+        Arguments.of("03/06/2026\"", true),
+        Arguments.of("03/06/2026'", true),
+        Arguments.of("03 06 2026", true),
+        Arguments.of("03/06/2026!", true),
+        Arguments.of("03/06/2026@#$%", true),
+        Arguments.of("03/06/2026<script>", true),
+        Arguments.of("03/06/2026 \"'", true),
+        Arguments.of("1/6/2026", false),
+        Arguments.of("1-6-2026", true),
+        Arguments.of("1/6/2026\", ", true));
   }
 
-  @Test
-  @DisplayName("validate - FTS field in date list with invalid date should fail")
-  void validate_FtsDateField_InvalidDate_HasErrors() {
+  @ParameterizedTest(name = "validate - FTS date field \"{0}\" - expectErrors: {1}")
+  @MethodSource("ftsDateFieldArguments")
+  void validate_FtsDateField(final String fieldValue, final boolean expectErrors) {
     final DynamicOptionFormData dateOption = new DynamicOptionFormData();
     dateOption.setMandatory(true);
-    dateOption.setFieldValue("03-06-2026");
+    dateOption.setFieldValue(fieldValue);
     dateOption.setFieldDescription("Special Date Field");
     dateOption.setFieldType("FTS");
 
@@ -295,12 +293,14 @@ class ProviderRequestDetailsValidatorTest {
     dynamicOptions.put("PCASEBALS3", dateOption);
 
     formData.setDynamicOptions(dynamicOptions);
-    providerRequestDetailsValidator.validate(formData, errors);
-
     formData.setIsAdditionalInformationPromptRequired(false);
     formData.setAdditionalInformation("N/A");
 
-    assertTrue(errors.hasErrors());
-    assertNotNull(errors.getFieldError("dynamicOptions[PCASEBALS3].fieldValue"));
+    providerRequestDetailsValidator.validate(formData, errors);
+
+    assertEquals(expectErrors, errors.hasErrors());
+    if (expectErrors) {
+      assertNotNull(errors.getFieldError("dynamicOptions[PCASEBALS3].fieldValue"));
+    }
   }
 }
