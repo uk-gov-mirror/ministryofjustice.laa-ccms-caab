@@ -109,6 +109,7 @@ class DateUtilsTest {
   @ValueSource(strings = {"", " ", "   "})
   @DisplayName("hasInvalidDateCharacters - returns false for null/blank")
   void hasInvalidDateCharacters_returnsFalseForNullAndBlank(String input) {
+    assertFalse(DateUtils.hasInvalidDateCharacters(null));
     assertFalse(DateUtils.hasInvalidDateCharacters(input));
   }
 }
