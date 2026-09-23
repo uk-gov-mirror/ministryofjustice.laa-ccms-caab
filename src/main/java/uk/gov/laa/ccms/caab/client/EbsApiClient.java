@@ -871,11 +871,20 @@ public class EbsApiClient extends BaseApiClient {
     addQueryParam(queryParams, "size", pageSize);
     addQueryParam(queryParams, "sort", criteria.getSort());
 
+    if (log.isDebugEnabled()) {
+      log.debug("Searching case notifications with query parameters: {}", redact(queryParams));
+    }
+
     return webClient
         .get()
         .uri(builder -> builder.path("/case-notifications").queryParams(queryParams).build())
         .retrieve()
         .bodyToMono(Notifications.class)
+        .doOnNext(
+            notifications ->
+                log.debug(
+                    "Case notification search matched {} notifications",
+                    Optional.ofNullable(notifications.getTotalElements()).orElse(0)))
         .onErrorResume(
             e ->
                 ebsApiClientErrorHandler.handleApiRetrieveError(
