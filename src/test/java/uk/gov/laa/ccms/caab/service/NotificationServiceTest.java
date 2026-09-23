@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -103,6 +104,46 @@ class NotificationServiceTest {
             notifications ->
                 "user1".equals(notifications.getContent().getFirst().getUser().getLoginId()))
         .verifyComplete();
+  }
+
+  @Test
+  void getNotifications_usesCaseEndpointForUnrestrictedCaseSearch() {
+    Notifications notificationsMock = new Notifications();
+    NotificationSearchCriteria criteria = new NotificationSearchCriteria();
+    criteria.setOriginatesFromCase(true);
+    criteria.setCaseReference("300000000001");
+    criteria.setAssignedToUserId("case_login");
+    criteria.setIncludeClosed(true);
+
+    when(ebsApiClient.getCaseNotifications(criteria, 10, 0, 10))
+        .thenReturn(Mono.just(notificationsMock));
+
+    StepVerifier.create(notificationService.getNotifications(criteria, 10, 0, 10))
+        .expectNext(notificationsMock)
+        .verifyComplete();
+
+    verify(ebsApiClient).getCaseNotifications(criteria, 10, 0, 10);
+    verify(ebsApiClient, never()).getNotifications(any(), anyInt(), any(), any());
+  }
+
+  @Test
+  void getNotifications_usesGeneralEndpointWhenCaseSearchHasAdditionalFilters() {
+    Notifications notificationsMock = new Notifications();
+    NotificationSearchCriteria criteria = new NotificationSearchCriteria();
+    criteria.setOriginatesFromCase(true);
+    criteria.setCaseReference("300000000001");
+    criteria.setIncludeClosed(true);
+    criteria.setNotificationFromDate("2026-01-01");
+
+    when(ebsApiClient.getNotifications(any(), eq(10), eq(0), eq(10)))
+        .thenReturn(Mono.just(notificationsMock));
+
+    StepVerifier.create(notificationService.getNotifications(criteria, 10, 0, 10))
+        .expectNext(notificationsMock)
+        .verifyComplete();
+
+    verify(ebsApiClient).getNotifications(any(), eq(10), eq(0), eq(10));
+    verify(ebsApiClient, never()).getCaseNotifications(any(), anyInt(), any(), any());
   }
 
   @Test

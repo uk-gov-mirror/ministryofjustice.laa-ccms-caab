@@ -1,6 +1,7 @@
 package uk.gov.laa.ccms.caab.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -263,6 +264,40 @@ public class EbsApiClientTest {
   @Nested
   @DisplayName("getNotifications() Tests")
   class GetNotificationsTests {
+
+    @Test
+    @DisplayName("Should use the dedicated exact case endpoint")
+    void getCaseNotifications_successful() {
+      NotificationSearchCriteria criteria = new NotificationSearchCriteria();
+      criteria.setCaseReference("300000000001");
+      criteria.setAssignedToUserId("case_login");
+      criteria.setSort("dateAssigned,asc");
+
+      when(webClientMock.get()).thenReturn(requestHeadersUriMock);
+      when(requestHeadersUriMock.uri(uriCaptor.capture())).thenReturn(requestHeadersMock);
+      when(requestHeadersMock.retrieve()).thenReturn(responseMock);
+      when(responseMock.bodyToMono(Notifications.class)).thenReturn(Mono.just(new Notifications()));
+
+      StepVerifier.create(ebsApiClient.getCaseNotifications(criteria, 1, 0, 10))
+          .expectNextCount(1)
+          .verifyComplete();
+
+      URI actualUri = uriCaptor.getValue().apply(UriComponentsBuilder.newInstance());
+      assertEquals(
+          "/case-notifications?provider-id=1&case-reference-number=300000000001"
+              + "&assigned-to-user-id=case_login&page=0&size=10&sort=dateAssigned,asc",
+          actualUri.toString());
+    }
+
+    @Test
+    @DisplayName("Should require a case reference for the dedicated endpoint")
+    void getCaseNotifications_requiresCaseReference() {
+      NotificationSearchCriteria criteria = new NotificationSearchCriteria();
+
+      assertThrows(
+          IllegalArgumentException.class,
+          () -> ebsApiClient.getCaseNotifications(criteria, 1, 0, 10));
+    }
 
     @Test
     @DisplayName("Should return successfully")

@@ -335,6 +335,30 @@ public class EbsApiClientIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  public void testGetCaseNotifications_returnsData() throws JsonProcessingException {
+    Notifications notifications = buildNotifications();
+    String notificationsJson = objectMapper.writeValueAsString(notifications);
+    NotificationSearchCriteria criteria = new NotificationSearchCriteria();
+    criteria.setCaseReference("300000000001");
+    criteria.setAssignedToUserId("case_login");
+    criteria.setSort("dateAssigned,asc");
+
+    wiremock.stubFor(
+        get(urlPathEqualTo("/case-notifications"))
+            .withQueryParam("provider-id", equalTo("20"))
+            .withQueryParam("case-reference-number", equalTo("300000000001"))
+            .withQueryParam("assigned-to-user-id", equalTo("case_login"))
+            .withQueryParam("page", equalTo("0"))
+            .withQueryParam("size", equalTo("10"))
+            .withQueryParam("sort", equalTo("dateAssigned,asc"))
+            .willReturn(okJson(notificationsJson)));
+
+    Notifications response = ebsApiClient.getCaseNotifications(criteria, 20, 0, 10).block();
+
+    assertEquals(notifications, response);
+  }
+
+  @Test
   public void testPostAllocateCaseReference_createsNewReference() throws JsonProcessingException {
     // Given
     CaseReferenceSummary expected = new CaseReferenceSummary().caseReferenceNumber("1234567890");

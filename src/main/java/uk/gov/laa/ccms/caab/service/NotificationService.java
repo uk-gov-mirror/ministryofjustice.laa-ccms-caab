@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import uk.gov.laa.ccms.caab.bean.NotificationSearchCriteria;
@@ -85,11 +86,26 @@ public class NotificationService {
       final int providerId,
       final Integer page,
       final Integer size) {
-    return ebsApiClient.getNotifications(
-        NotificationSearchUtil.prepareNotificationSearchCriteria(searchCriteria),
-        providerId,
-        page,
-        size);
+    final boolean useCaseEndpoint = canUseCaseNotificationSearch(searchCriteria);
+    return useCaseEndpoint
+        ? ebsApiClient.getCaseNotifications(searchCriteria, providerId, page, size)
+        : ebsApiClient.getNotifications(
+            NotificationSearchUtil.prepareNotificationSearchCriteria(searchCriteria),
+            providerId,
+            page,
+            size);
+  }
+
+  private boolean canUseCaseNotificationSearch(NotificationSearchCriteria criteria) {
+    return criteria.isOriginatesFromCase()
+        && StringUtils.hasText(criteria.getCaseReference())
+        && criteria.isIncludeClosed()
+        && !StringUtils.hasText(criteria.getProviderCaseReference())
+        && !StringUtils.hasText(criteria.getClientSurname())
+        && criteria.getFeeEarnerId() == null
+        && !StringUtils.hasText(criteria.getNotificationType())
+        && !StringUtils.hasText(criteria.getNotificationFromDate())
+        && !StringUtils.hasText(criteria.getNotificationToDate());
   }
 
   /**

@@ -845,6 +845,44 @@ public class EbsApiClient extends BaseApiClient {
   }
 
   /**
+   * Retrieves notifications for an exact case using the optimized case-specific API path.
+   *
+   * @param criteria case-originated notification criteria
+   * @param providerId provider firm identifier
+   * @param page page number
+   * @param pageSize number of records per page
+   * @return the matching notifications with exact pagination totals
+   */
+  public Mono<Notifications> getCaseNotifications(
+      final NotificationSearchCriteria criteria,
+      final int providerId,
+      final Integer page,
+      final Integer pageSize) {
+    if (!StringUtils.hasText(criteria.getCaseReference())) {
+      throw new IllegalArgumentException(
+          "A case reference is required for the case notification search");
+    }
+
+    final MultiValueMap<String, String> queryParams = createDefaultQueryParams();
+    addQueryParam(queryParams, "provider-id", providerId);
+    addQueryParam(queryParams, "case-reference-number", criteria.getCaseReference());
+    addQueryParam(queryParams, "assigned-to-user-id", criteria.getAssignedToUserId());
+    addQueryParam(queryParams, "page", page);
+    addQueryParam(queryParams, "size", pageSize);
+    addQueryParam(queryParams, "sort", criteria.getSort());
+
+    return webClient
+        .get()
+        .uri(builder -> builder.path("/case-notifications").queryParams(queryParams).build())
+        .retrieve()
+        .bodyToMono(Notifications.class)
+        .onErrorResume(
+            e ->
+                ebsApiClientErrorHandler.handleApiRetrieveError(
+                    e, "Case notifications", queryParams));
+  }
+
+  /**
    * Retrieves a notification from the API based on the provided notification ID and provider ID.
    *
    * @param notificationId the unique identifier of the notification to retrieve
